@@ -24,8 +24,7 @@ class ChatRequest(BaseModel):
     model: str | None = None
     messages: list
     temperature: float | None = 0.7
-    max_tokens: int | None = 512
-
+    max_tokens: int | None = 2048
 
 @app.get("/")
 def home():
