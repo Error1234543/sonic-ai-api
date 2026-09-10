@@ -13,8 +13,7 @@ client = OpenAI(
     api_key=HF_TOKEN
 )
 
-MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
-
+MODEL = "google/gemma-2-2b-it"
 api_key_header = APIKeyHeader(
     name="Authorization",
     auto_error=False
