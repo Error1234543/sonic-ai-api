@@ -1,11 +1,27 @@
-from fastapi import FastAPI
+
+import os
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
+from openai import OpenAI
 
 app = FastAPI(title="Sonic AI API")
 
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+# Hugging Face OpenAI-compatible router
+client = OpenAI(
+    base_url="https://router.huggingface.co/v1",
+    api_key=HF_TOKEN
+)
+
+MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+
 
 class ChatRequest(BaseModel):
-    message: str
+    model: str | None = None
+    messages: list
+    temperature: float | None = 0.7
+    max_tokens: int | None = 512
 
 
 @app.get("/")
@@ -22,7 +38,7 @@ def models():
         "object": "list",
         "data": [
             {
-                "id": "sonic-model",
+                "id": MODEL,
                 "object": "model"
             }
         ]
@@ -30,19 +46,34 @@ def models():
 
 
 @app.post("/v1/chat/completions")
-def chat(request: ChatRequest):
-    return {
-        "id": "sonic-response",
-        "object": "chat.completion",
-        "model": "sonic-model",
-        "choices": [
-            {
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": "Sonic AI API is working!"
-                },
-                "finish_reason": "stop"
-            }
-        ]
-    }
+def chat(
+    request: ChatRequest,
+    authorization: str | None = Header(default=None)
+):
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="API key required"
+        )
+
+    if not HF_TOKEN:
+        raise HTTPException(
+            status_code=500,
+            detail="HF_TOKEN is not configured"
+        )
+
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=request.messages,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens
+        )
+
+        return response.model_dump()
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
