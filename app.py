@@ -1,6 +1,6 @@
-
 import os
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException, Security
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from openai import OpenAI
 
@@ -8,13 +8,17 @@ app = FastAPI(title="Sonic AI API")
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-# Hugging Face OpenAI-compatible router
 client = OpenAI(
     base_url="https://router.huggingface.co/v1",
     api_key=HF_TOKEN
 )
 
 MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+
+api_key_header = APIKeyHeader(
+    name="Authorization",
+    auto_error=False
+)
 
 
 class ChatRequest(BaseModel):
@@ -48,7 +52,7 @@ def models():
 @app.post("/v1/chat/completions")
 def chat(
     request: ChatRequest,
-    authorization: str | None = Header(default=None)
+    authorization: str | None = Security(api_key_header)
 ):
     if not authorization:
         raise HTTPException(
