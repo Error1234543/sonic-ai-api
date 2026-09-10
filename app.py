@@ -7,13 +7,15 @@ from openai import OpenAI
 app = FastAPI(title="Sonic AI API")
 
 HF_TOKEN = os.getenv("HF_TOKEN")
+SONIC_API_KEY = os.getenv("SONIC_API_KEY")
+
+MODEL = "Qwen/Qwen3-4B-Thinking-2507"
 
 client = OpenAI(
     base_url="https://router.huggingface.co/v1",
     api_key=HF_TOKEN
 )
 
-MODEL = "Qwen/Qwen3-4B-Thinking-2507"
 api_key_header = APIKeyHeader(
     name="Authorization",
     auto_error=False
@@ -25,6 +27,7 @@ class ChatRequest(BaseModel):
     messages: list
     temperature: float | None = 0.7
     max_tokens: int | None = 2048
+
 
 @app.get("/")
 def home():
@@ -52,10 +55,19 @@ def chat(
     request: ChatRequest,
     authorization: str | None = Security(api_key_header)
 ):
-    if not authorization:
+
+    if not SONIC_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="SONIC_API_KEY is not configured"
+        )
+
+    expected_key = f"Bearer {SONIC_API_KEY}"
+
+    if authorization != expected_key:
         raise HTTPException(
             status_code=401,
-            detail="API key required"
+            detail="Invalid API key"
         )
 
     if not HF_TOKEN:
